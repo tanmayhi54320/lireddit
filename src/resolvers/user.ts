@@ -1,46 +1,89 @@
-import { User } from "../entities/User";
+import { Users } from "../entities/User";
 import { MyContext } from "../types";
-import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Resolver } from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  Field,
+  InputType,
+  Mutation,
+  ObjectType,
+  Resolver,
+} from "type-graphql";
 import argon2 from "argon2";
 
 @InputType()
-class UserNameandPassword{
-    @Field()
-    username:string;
-    @Field()
-    password:string;
+class UserNameandPassword {
+  @Field()
+  username: string;
+  @Field()
+  password: string;
 }
 
 @ObjectType()
-class UserResponse{
-    @Field()
-    errors?:Error[];
+class FieldError {
+  @Field()
+  field: string;
+  @Field()
+  message: string;
+}
 
-    @Field()
-    user?:User;
+@ObjectType()
+class UserResponse {
+  @Field(() => [FieldError], { nullable: true })
+  errors?: FieldError[];
+
+  @Field(() => Users, { nullable: true })
+  user?: Users;
 }
 
 @Resolver()
-export class UserResolver{
-    @Mutation(() => User)
-    async register(
-        @Arg('options') Option:UserNameandPassword,
-        @Ctx() { em }:MyContext
-    ){
-        const hashedPassword=await argon2.hash(Option.password);
-        const user=em.create(User,{username:Option.username,password:hashedPassword});
-        await em.persistAndFlush(user);
-        return user;
+export class UserResolver {
+  @Mutation(() => UserResponse)
+  async register(
+    @Arg("options") Option: UserNameandPassword,
+    @Ctx() { em }: MyContext
+  ): Promise<UserResponse> {
+    const hashedPassword = await argon2.hash(Option.password);
+    const user = em.create(Users, {
+      username: Option.username,
+      password: hashedPassword,
+    });
+      await em.persistAndFlush(user);
+    return {
+      user,
+    };
+  }
+
+  @Mutation(() => UserResponse)
+  async login(
+    @Arg("options") Option: UserNameandPassword,
+    @Ctx() { em }: MyContext
+  ): Promise<UserResponse> {
+    const user = await em.findOne(Users, { username: Option.username });
+    if (!user) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "That username does'nt exist",
+          },
+        ],
+      };
     }
 
-    @Mutation(()=>User)
-    async login(
-        @Arg('options') Option:UserNameandPassword,
-        @Ctx() { em }:MyContext
-    ){
-        const user=em.findOne(User,{username:Option.username})
-        if(!user){
-
-        }
+    const valid = await argon2.verify(user.password, Option.password);
+    if (!valid) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "The password doesn't exist",
+          },
+        ],
+      };
     }
+    return {
+      user,
+    };
+  }
 }

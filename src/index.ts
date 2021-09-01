@@ -7,6 +7,7 @@ import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
+// import { UserResolver } from "./resolvers/user";
 const main=async()=>{
     const orm =await MikroORM.init(mikroOrmConfig);
     await orm.getMigrator().up();
@@ -23,8 +24,8 @@ const main=async()=>{
     });
     await apolloServer.start();
     apolloServer.applyMiddleware({ app });
-    app.listen(4000,()=>{
-        console.log("Server running on 4000");
+    app.listen(4001,()=>{
+        console.log("Server running on 4001");
     })
 };
 main();
