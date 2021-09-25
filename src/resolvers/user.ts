@@ -7,9 +7,16 @@ import {
   InputType,
   Mutation,
   ObjectType,
+  Query,
   Resolver,
 } from "type-graphql";
 import argon2 from "argon2";
+
+declare module "express-session" {
+  interface Session {
+    userId: number;
+  }
+}
 
 @InputType()
 class UserNameandPassword {
@@ -38,17 +45,32 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Query(()=> UserResponse)
+  async me(
+    @Ctx(){req,em}:MyContext
+  ){
+    if(!req.session.userId){
+      return null;
+    }
+    console.log(req.session);
+    const user=await em.findOne(Users,{id:req.session.userId});
+    return user;
+  }
+
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") Option: UserNameandPassword,
-    @Ctx() { em }: MyContext
+    @Ctx() { em,req }: MyContext
   ): Promise<UserResponse> {
     const hashedPassword = await argon2.hash(Option.password);
     const user = em.create(Users, {
       username: Option.username,
       password: hashedPassword,
     });
-      await em.persistAndFlush(user);
+    await em.persistAndFlush(user);
+
+    req.session.userId=user.id;
+    console.log(req.session);
     return {
       user,
     };
@@ -57,7 +79,7 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async login(
     @Arg("options") Option: UserNameandPassword,
-    @Ctx() { em }: MyContext
+    @Ctx() { em, req}: MyContext
   ): Promise<UserResponse> {
     const user = await em.findOne(Users, { username: Option.username });
     if (!user) {
@@ -82,6 +104,9 @@ export class UserResolver {
         ],
       };
     }
+    req.session.userId = user.id;
+    console.log();
+
     return {
       user,
     };
