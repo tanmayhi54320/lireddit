@@ -7,20 +7,19 @@ import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
-import redis from "redis";
 import session from "express-session";
 import connectRedis from "connect-redis";
+import redis from 'redis';
+import { ApolloServerPluginLandingPageGraphQLPlayground } from 'apollo-server-core';
 
 const main = async () => {
   const orm = await MikroORM.init(mikroOrmConfig);
   await orm.getMigrator().up();
-  // const post = orm.em.create(Post,{title:"My first Post"});
-  // orm.em.persistAndFlush(post);
 
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redisClient = redis.createClient();
+  const redisClient = redis.createClient({port:7777});
 
   app.use(
     session({
@@ -31,9 +30,9 @@ const main = async () => {
       }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 365,
-        httpOnly: false,
-        secure: true,
-        sameSite: "none",
+        httpOnly: true,
+        secure: __prod__,
+        sameSite: "lax",
       },
       saveUninitialized: false,
       secret: "keyboard cat",
@@ -42,6 +41,9 @@ const main = async () => {
   );
 
   const apolloServer = new ApolloServer({
+    plugins:[
+      ApolloServerPluginLandingPageGraphQLPlayground(),
+    ],
     schema: await buildSchema({
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,

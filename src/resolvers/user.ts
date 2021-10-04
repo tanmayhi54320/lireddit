@@ -12,11 +12,11 @@ import {
 } from "type-graphql";
 import argon2 from "argon2";
 
-declare module "express-session" {
-  interface Session {
-    userId: number;
-  }
-}
+// declare module "express-session" {
+//   interface Session {
+//     userId: number;
+//   }
+// }
 
 @InputType()
 class UserNameandPassword {
@@ -49,12 +49,13 @@ export class UserResolver {
   async me(
     @Ctx(){req,em}:MyContext
   ){
-    if(!req.session.userId){
-      return null;
-    }
-    console.log(req.session);
-    const user=await em.findOne(Users,{id:req.session.userId});
-    return user;
+    // if(!req.session.UserID){
+    //   return null;
+    // }
+    const user=await em.findOne(Users,{id:req.session.UserID});
+    return {
+      user,
+    };
   }
 
   @Mutation(() => UserResponse)
@@ -69,7 +70,7 @@ export class UserResolver {
     });
     await em.persistAndFlush(user);
 
-    req.session.userId=user.id;
+    req.session.UserID=user.id;
     console.log(req.session);
     return {
       user,
@@ -104,8 +105,8 @@ export class UserResolver {
         ],
       };
     }
-    req.session.userId = user.id;
-    console.log();
+    req.session.UserID = user.id;
+    console.log(req.session);
 
     return {
       user,
