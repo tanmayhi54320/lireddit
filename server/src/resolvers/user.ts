@@ -39,14 +39,12 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
-  @Query(()=> UserResponse)
-  async me(
-    @Ctx(){req,em}:MyContext
-  ){
-    // if(!req.session.UserID){
-    //   return null;
-    // }
-    const user=await em.findOne(Users,{id:req.session.UserID});
+  @Query(() => UserResponse, { nullable: true })
+  async me(@Ctx() { req, em }: MyContext) {
+    if (!req.session.UserID) {
+      return null;
+    }
+    const user = await em.findOne(Users, { id: req.session.UserID });
     return {
       user,
     };
@@ -55,7 +53,7 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") Option: UserNameandPassword,
-    @Ctx() { em,req }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const hashedPassword = await argon2.hash(Option.password);
     const user = em.create(Users, {
@@ -64,7 +62,7 @@ export class UserResolver {
     });
     await em.persistAndFlush(user);
 
-    req.session.UserID=user.id;
+    req.session.UserID = user.id;
     console.log(req.session);
     return {
       user,
@@ -74,7 +72,7 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async login(
     @Arg("options") Option: UserNameandPassword,
-    @Ctx() { em, req}: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     const user = await em.findOne(Users, { username: Option.username });
     if (!user) {
@@ -100,7 +98,6 @@ export class UserResolver {
       };
     }
     req.session.UserID = user.id;
-    console.log(req.session);
 
     return {
       user,
